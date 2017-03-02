@@ -1,7 +1,3 @@
-# deepwaterlearning.github.io
+# datascience
 
-Copyright @ deepwaterlearning
-
-## Description
-
-This will be the main portfolio page for DeepWaterLearning.
+Welcome to my Github repo.
