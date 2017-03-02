@@ -4,4 +4,4 @@ Copyright @ deepwaterlearning
 
 ## Description
 
-This will be the main portfolio page for deepwaterlearning.
+This will be the main portfolio page for DeepWaterLearning.
