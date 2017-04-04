@@ -1,4 +1,5 @@
 library(shiny)
+library(DT)
 
 currentTabPanel = "graph"
 
@@ -25,11 +26,15 @@ shinyUI(
         ),
         conditionalPanel(
           condition = 'input.tab_views == "box_config"',
-          helpText("Select countries to display in the box plot.")
+          helpText("Select countries to display in the box plot."),
+          actionButton('selectAll_box', 'Select All'),
+          actionButton('clearAll_box', 'Clear All')
         ),
         conditionalPanel(
           condition = 'input.tab_views == "linear_config"',
-          helpText("Select countries to display in the linear plot.")
+          helpText("Select countries to display in the linear plot."),
+          actionButton('selectAll_linear', 'Select All'),
+          actionButton('clearAll_linear', 'Clear All')
         )
         
     ),
@@ -38,8 +43,10 @@ shinyUI(
         id = 'tab_views',
         selected = NULL,
         tabPanel('Plot', helpText("Plots go here."), value = 'main_plot'),
-        tabPanel('Countries for Boxplot', helpText("Countries configuration for boxplot goes here."), value = 'box_config'),
-        tabPanel('Countries for Linear', helpText("Countries configuration for linear goes here."), value = 'linear_config')         
+        tabPanel('Countries for Boxplot', value = 'box_config',
+                 DT::dataTableOutput('box_table')),
+        tabPanel('Countries for Linear', value = 'linear_config',
+                 DT::dataTableOutput('linear_table'))         
       )
       
 #      plotOutput("map")

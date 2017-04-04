@@ -2,7 +2,8 @@
 
 library(maps)
 library(dplyr)
-library(mapproj)
+library(shiny)
+library(DT)
 
 
 # common 
@@ -32,16 +33,7 @@ rownames(male_lexp) = male_lexp$Country.Code
 male_lexp[1:2] <- NULL
 male_lexp = male_lexp[rowSums(is.na(male_lexp)) != ncol(male_lexp),]
 
-# don't include indicator name/symbol, and drop 2015,2016 which are just empty
-#columns_to_use = c(rep("NA", 2), rep("NULL", 2),rep(NA, 57), rep("NULL", 3))
-#  [0,1] + range(4, 59) 
 
-# read and skip non-essential data
-#female_lexp = read.csv('../data/API_SP.DYN.LE00.FE.IN_DS2_en_csv_v2.csv', header = TRUE, skip = 4,stringsAsFactors = FALSE) 
-#pd.read_csv('data/API_SP.DYN.LE00.FE.IN_DS2_en_csv_v2.csv', skiprows=2, header=1, usecols=columns_to_use)
-#male_lexp = pd.read_csv('data/API_SP.DYN.LE00.MA.IN_DS2_en_csv_v2.csv', skiprows=2, header=1, usecols=columns_to_use)
-
-#counties = readRDS("/Users/intothelight/nycdatascience/R_work/shiny_apps/counties_app/data/counties.rds")
 #source("/Users/intothelight/nycdatascience/R_work/shiny_apps/counties_app/helpers.R")
 
 # centre = function(x,type){
@@ -55,7 +47,11 @@ male_lexp = male_lexp[rowSums(is.na(male_lexp)) != ncol(male_lexp),]
 
 shinyServer(function(input, output) {
   
-female_lexp = read.csv('../data/API_SP.DYN.LE00.FE.IN_DS2_en_csv_v2.csv', header = FALSE, skip = 4,stringsAsFactors = FALSE)  
+  output$box_table = DT::renderDataTable(country_names)
+  
+  output$linear_table = DT::renderDataTable(country_names)
+  
+#female_lexp = read.csv('../data/API_SP.DYN.LE00.FE.IN_DS2_en_csv_v2.csv', header = FALSE, skip = 4,stringsAsFactors = FALSE)  
 #   output$map = renderPlot( {
 # 
 # args = switch(input$var,
