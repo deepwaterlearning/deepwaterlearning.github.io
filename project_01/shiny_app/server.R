@@ -4,6 +4,7 @@ library(maps)
 library(dplyr)
 library(shiny)
 library(DT)
+library(ggplot2)
 
 
 # common 
@@ -47,9 +48,37 @@ male_lexp = male_lexp[rowSums(is.na(male_lexp)) != ncol(male_lexp),]
 
 shinyServer(function(input, output) {
   
-  output$box_table = DT::renderDataTable(country_names)
+  
+  filtered_countries_linear <- reactive({
+    
+  })
+  
+  filtered_countries_box <- reactive({
+    # bcl %>%
+    #   filter(Price >= input$priceInput[1],
+    #          Price <= input$priceInput[2],
+    #          Type == input$typeInput,
+    #          Country == input$countryInput
+    #   )
+  })
+  
+  output$box_table = DT::renderDataTable(country_names, server = FALSE,
+                                         selection = list(target = 'row+column')
+                                         )
   
   output$linear_table = DT::renderDataTable(country_names)
+  
+  
+  proxy_box_table = dataTableProxy('box_table')
+  proxy_linear_table = dataTableProxy('linear_table')
+  
+  observeEvent(input$selectAll_box, {
+    proxy_box_table %>% selectRows(c(1,1,3,1))
+  })
+  
+  observeEvent(input$clearAll_box, {
+    proxy_box_table %>% selectRows(NULL)
+  })
   
 #female_lexp = read.csv('../data/API_SP.DYN.LE00.FE.IN_DS2_en_csv_v2.csv', header = FALSE, skip = 4,stringsAsFactors = FALSE)  
 #   output$map = renderPlot( {
@@ -66,5 +95,9 @@ shinyServer(function(input, output) {
 # do.call(percent_map, args)
 #   })
 
+  observe({ print(input$selectAll_box) })
+  observe({ print(input$clearAll_box) })
+  observe({ tmp= filtered(); print("filtered() reacted") })
+  
   
 })

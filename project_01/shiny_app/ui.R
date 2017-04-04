@@ -42,7 +42,8 @@ shinyUI(
       tabsetPanel(
         id = 'tab_views',
         selected = NULL,
-        tabPanel('Plot', helpText("Plots go here."), value = 'main_plot'),
+        tabPanel('Plot', helpText("Plots go here."), value = 'main_plot',
+                 plotOutput("main_plot")),
         tabPanel('Countries for Boxplot', value = 'box_config',
                  DT::dataTableOutput('box_table')),
         tabPanel('Countries for Linear', value = 'linear_config',
