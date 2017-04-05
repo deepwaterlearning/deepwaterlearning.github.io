@@ -1,10 +1,27 @@
 library(shiny)
 library(DT)
 
-currentTabPanel = "graph"
+mycss <- "
+#plot-container {
+  position: relative;
+}
+#loading-spinner {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: -1;
+  margin-top: -33px;  /* half of the spinner's height */
+  margin-left: -33px; /* half of the spinner's width */
+}
+#plot.recalculating {
+  z-index: -2;
+}
+"
+
 
 shinyUI( 
   fluidPage(
+    tags$head(tags$style(HTML(mycss))),
     titlePanel("Life Expectancy Explorer"),
     sidebarLayout(
       sidebarPanel(
@@ -22,7 +39,8 @@ shinyUI(
           radioButtons("radio", label = "Choose min/max values to display",
                        choices = list("Min" = 1, "Max" = 2),
                        selected = 1
-          )
+          ),
+          actionButton("update_button", "Update Plot")
         ),
         conditionalPanel(
           condition = 'input.tab_views == "box_config"',
@@ -42,8 +60,12 @@ shinyUI(
       tabsetPanel(
         id = 'tab_views',
         selected = NULL,
-        tabPanel('Plot', helpText("Plots go here."), value = 'main_plot',
-                 plotOutput("main_plot")),
+        tabPanel('Plot', helpText(""), value = 'main_plot',
+                 div(id = "plot-container",
+                     tags$img(src = "images/spinner.gif",
+                              id = "loading-spinner"),
+                     plotOutput("main_plot"))
+                 ),
         tabPanel('Countries for Boxplot', value = 'box_config',
                  DT::dataTableOutput('box_table')),
         tabPanel('Countries for Linear', value = 'linear_config',
