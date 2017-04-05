@@ -5,6 +5,9 @@ library(dplyr)
 library(shiny)
 library(DT)
 library(ggplot2)
+library(ggthemes)
+
+source("helpers.R")
 
 
 # common 
@@ -35,7 +38,7 @@ male_lexp[1:2] <- NULL
 male_lexp = male_lexp[rowSums(is.na(male_lexp)) != ncol(male_lexp),]
 
 
-#source("/Users/intothelight/nycdatascience/R_work/shiny_apps/counties_app/helpers.R")
+
 
 # centre = function(x,type){
 #   switch(type,
@@ -48,6 +51,10 @@ male_lexp = male_lexp[rowSums(is.na(male_lexp)) != ncol(male_lexp),]
 
 shinyServer(function(input, output) {
   
+  
+  filtered_main_plot <- reactive({
+    female_lexp
+  })
   
   filtered_countries_linear <- reactive({
     
@@ -80,6 +87,14 @@ shinyServer(function(input, output) {
     proxy_box_table %>% selectRows(NULL)
   })
   
+  output$main_plot <- renderPlot({
+    ggplot(stack(filtered_main_plot()), aes(x = ind, y = values)) + 
+      geom_boxplot() + theme_minimal() +
+      theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) + 
+      scale_y_continuous(name="Age", breaks=seq(0,90,10)) +
+      scale_x_discrete(label=year_label_formatter, name="Year")
+  })
+  
 #female_lexp = read.csv('../data/API_SP.DYN.LE00.FE.IN_DS2_en_csv_v2.csv', header = FALSE, skip = 4,stringsAsFactors = FALSE)  
 #   output$map = renderPlot( {
 # 
@@ -97,7 +112,7 @@ shinyServer(function(input, output) {
 
   observe({ print(input$selectAll_box) })
   observe({ print(input$clearAll_box) })
-  observe({ tmp= filtered(); print("filtered() reacted") })
+  
   
   
 })
