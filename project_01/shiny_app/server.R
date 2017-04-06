@@ -7,6 +7,7 @@ library(DT)
 library(ggplot2)
 library(ggthemes)
 library(data.table)
+library(reshape2)
 
 
 source("helpers.R")
@@ -62,8 +63,12 @@ rownames(country_names) <- NULL # causes numeric re-ordering
 shinyServer(function(input, output) {
   
   gender_requested = "Female"
-  box_countries_requested = country_names
-  linear_countries_requested = country_names
+  box_current_selected_indices = seq(1, nrow(country_names))
+  box_new_selected_indicies = NULL
+#  box_countries_requested = country_names
+  linear_current_selected_indices = NULL
+  linear_new_selected_indicies = NULL
+#  linear_countries_requested = NULL
   female_dataset = female_lexp
   male_dataset = male_lexp
   
@@ -86,13 +91,23 @@ shinyServer(function(input, output) {
     #   )
   })
   
+  # output$x1 = DT::renderDataTable(
+  #   iris, server = FALSE,
+  #   selection = list(mode = 'multiple', selected = c(1, 3, 8, 12))
+  # )
+  
   output$box_table = DT::renderDataTable(country_names, server = FALSE,
-                                         selection = list(target = 'row+column')
-                                         )
+                                         selection = list(target = 'row',
+                                                          mode = 'multiple', 
+                                                          selected = seq(1, nrow(country_names))
+                                                          )
+                                         ) # pre-select all countries
   
   output$linear_table = DT::renderDataTable(country_names, server = FALSE,
-                                            selection = list(target = 'row+column')
-                                            )
+                                            selection = list(target = 'row',
+                                                             mode = 'multiple'
+                                                             )
+                                            ) # pre-select none
   
   
   proxy_box_table = dataTableProxy('box_table')
@@ -118,6 +133,20 @@ shinyServer(function(input, output) {
   
   observeEvent(input$update_button, {
     print("Button activated")
+    s = input$box_table_rows_selected
+    if (length(s)) {
+      cat('These box rows were selected:\n\n')
+      cat(s, sep = ', ')
+      cat('\n\n')
+      print(s)
+    }
+    
+    s2 = input$linear_table_rows_selected
+    if (length(s2)) {
+      cat('These linear rows were selected:\n\n')
+      cat(s2, sep = ', ')
+      cat('\n\n')
+    }
   })
   
   output$main_plot <- renderPlot({
@@ -125,24 +154,43 @@ shinyServer(function(input, output) {
       return()
     }
     
+    num_of_box_countries = length(box_current_selected_indices)
     
+    # Title like "Female Life Expectancy In 256 Countries"
+    plot_title = sprintf("Life Expectancy In %d %s",
+                         num_of_box_countries,(ifelse(num_of_box_countries>1, "Countries", "Country")))
+        
     if(gender_requested=='Female'){
+      plot_title = paste("Female",plot_title)
       print("Female datset requested")
     } else if(gender_requested=='Male'){
+      plot_title = paste("Male",plot_title)
       print("Male datset requested")
     } else if(gender_requested=='Both'){
+      plot_title = paste("Female and Male",plot_title)
       print("Both datsets requested")
     }else {
+      plot_title = paste("Female",plot_title)
       print("Default Female datset requested")
     }
     
     
     
     plt = ggplot(stack(filtered_main_plot()), aes(x = ind, y = values)) + 
-      geom_boxplot() + theme_minimal() + ggtitle("Female Life Expectancy In 256 Countries") +
+      geom_boxplot() + theme_minimal() + ggtitle(plot_title) +
       theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) + 
       scale_y_continuous(name="Age", breaks=seq(0,90,10)) +
       scale_x_discrete(label=year_label_formatter, name="Year")
+    
+    
+    # ggplot(data, aes(x=factor(X), y=Y, colour = factor(dep_C1)))  +
+    #   geom_boxplot(outlier.size=0, fill = "white", position="identity", alpha=.5)  +
+    #   stat_summary(fun.y=median, geom="line", aes(group=factor(dep_C1)), size=2) 
+    
+    # (plot1 <- ggplot(df1, aes(v, p)) + 
+    #     geom_point() +
+    #     geom_step(data = df2)
+    # )
     
     return(plt)
   })
