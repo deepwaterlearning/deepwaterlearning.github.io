@@ -1,4 +1,5 @@
 library(shiny)
+library(shinyjs)
 library(DT)
 
 mycss <- "
@@ -21,7 +22,14 @@ mycss <- "
 
 shinyUI( 
   fluidPage(
+    useShinyjs(),  # Set up shinyjs
     tags$head(tags$style(HTML(mycss))),
+    tags$head(
+      tags$style(HTML("
+    .shiny-output-error-validation {
+    color: red;
+    }
+    "))),
     titlePanel("Life Expectancy Explorer"),
     sidebarLayout(
       sidebarPanel(

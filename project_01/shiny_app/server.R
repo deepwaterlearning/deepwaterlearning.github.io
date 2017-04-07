@@ -8,6 +8,7 @@ library(ggplot2)
 library(ggthemes)
 library(data.table)
 library(reshape2)
+library(shinyjs)
 
 
 source("helpers.R")
@@ -50,31 +51,55 @@ setDT(male_lexp, keep.rownames = TRUE)[]
 setnames(male_lexp, 1, "Country.Code")
 rownames(country_names) <- NULL # causes numeric re-ordering
 
+# Misc variables
+female_selected = c(1)
+male_selected = c(2)
+both_selected = c(1,2)
 
-# centre = function(x,type){
-#   switch(type,
-#          mean=mean(x),
-#          median=median(x))
-# }
-# x = rnorm(10)
-# centre(x,"mean")
-# centre(x, "median")
 
 shinyServer(function(input, output) {
   
+  # Various needed variables
   gender_requested = "Female"
   box_current_selected_indices = seq(1, nrow(country_names))
-  box_new_selected_indicies = NULL
+  box_new_selected_indicies = seq(1, nrow(country_names))
 #  box_countries_requested = country_names
   linear_current_selected_indices = NULL
   linear_new_selected_indicies = NULL
 #  linear_countries_requested = NULL
   female_dataset = female_lexp
   male_dataset = male_lexp
+  both_dataset = NULL
   
-  all_matrix = matrix(1L,nrow=nrow(country_names) ,ncol=2 )
+  all_rows = seq(1, nrow(country_names))
+  is_configured = TRUE
+  
+  
+  processRequestedData <- function() {
+    
+    if(gender_requested=='Female'){
+      female_dataset <<- female_lexp %>% select(-Country.Code)
+    } else if(gender_requested=='Male'){
+      male_dataset <<- male_lexp %>% select(-Country.Code)
+    } else if(gender_requested=='Both'){
+      female_dataset <<- female_lexp %>% select(-Country.Code)
+      male_dataset <<- male_lexp %>% select(-Country.Code)
+      female_mod = female_lexp %>% mutate(Gender = as.factor("Female"))
+      male_mod = male_lexp %>% mutate(Gender = as.factor("Male"))
+      both_dataset <<- rbind(female_mod,male_mod)
+      
+    }else { # default female
+      female_dataset <<- female_lexp %>% select(-Country.Code)
+    }
+    
+    
+  }
+  
+  
   
   filtered_main_plot <- reactive({
+    
+    
     female_dataset %>% select(-Country.Code)
   })
   
@@ -115,7 +140,7 @@ shinyServer(function(input, output) {
   
   # Bloxplot Config Table
   observeEvent(input$selectAll_box, {
-    proxy_box_table %>% selectRows(all_matrix)
+    proxy_box_table %>% selectRows(all_rows)
   })
   
   observeEvent(input$clearAll_box, {
@@ -124,7 +149,7 @@ shinyServer(function(input, output) {
   
   # LinearPlot Config Table
   observeEvent(input$selectAll_linear, {
-    proxy_linear_table %>% selectRows(all_matrix)
+    proxy_linear_table %>% selectRows(all_rows)
   })
   
   observeEvent(input$clearAll_linear, {
@@ -132,52 +157,132 @@ shinyServer(function(input, output) {
   })
   
   observeEvent(input$update_button, {
-    print("Button activated")
-    s = input$box_table_rows_selected
-    if (length(s)) {
-      cat('These box rows were selected:\n\n')
-      cat(s, sep = ', ')
-      cat('\n\n')
-      print(s)
+    print("ObserveEvent:UpdateBtn: Enter")
+    
+    # Get all configuration data
+    # What genders are requested? (Need at least one checked)
+    if (is.null(input$gender_group)) {
+      is_configured <<- FALSE
+      alert("You must select at least one gender.")
+      print("ObserveEvent:UpdateBtn:No gender selected: Exit")
+      return()
     }
     
-    s2 = input$linear_table_rows_selected
-    if (length(s2)) {
-      cat('These linear rows were selected:\n\n')
-      cat(s2, sep = ', ')
-      cat('\n\n')
+    gender_number = as.numeric(input$gender_group)
+    
+    # What countries for plots (dont need any for linear, but need something for plot)?
+    if (is.null(input$box_table_rows_selected)) {
+      is_configured <<- FALSE
+      alert("You must select at least one country for the box plot.")
+      print("ObserveEvent:UpdateBtn:No countries selected: Exit")
+      return()
     }
+    
+    
+    box_new_selected_indices <<- input$box_table_rows_selected
+    
+    if(identical(box_new_selected_indices, box_current_selected_indices)){
+      print("current and new indexes are the same\n\n")
+      # cat('These box rows were selected(current,new):\n\n')
+      # cat(box_current_selected_indices, sep = ', ')
+      # cat('\n\n')
+      # cat(box_new_selected_indices, sep = ', ')
+    }else{ # lets update our indexes
+      print("current and new indexes are NOT the same\n\n")
+      # cat('These box rows were selected(current,new):\n\n')
+      # cat(box_current_selected_indices, sep = ', ')
+      # cat('\n\n')
+      # cat(box_new_selected_indices, sep = ', ')
+      
+      box_current_selected_indices <<- box_new_selected_indices
+    }
+    
+    # Gender configuration
+    
+    if(identical(female_selected,gender_number)){
+      gender_requested <<- "Female"
+      print("Female requested")
+    }else if(identical(male_selected,gender_number)){
+      gender_requested <<- "Male"
+      print("Male requested")
+    }else if (identical(both_selected,gender_number)){
+      gender_requested <<- "Both"
+      print("Both requested")
+    }else {
+      gender_requested <<- "Female"
+      print("Defualt Female requested")
+    }
+
+    # Any linear countries
+    if (length(input$linear_table_rows_selected)) {
+      linear_new_selected_indices <<- input$linear_table_rows_selected
+      # if (is.null(linear_current_selected_indices)){
+      #   linear_current_selected_indices = linear_new_selected_indices
+      # }
+      # I might track current better if I need a reset to last state
+      linear_current_selected_indices <<- linear_new_selected_indices
+      # cat('These linear rows were selected:\n\n')
+      # cat(linear_current_selected_indices, sep = ', ')
+      # cat('\n\n')
+    }else { # reset variables to NULL
+      linear_new_selected_indices <<- NULL
+      linear_current_selected_indices <<- NULL
+    }
+    
+    print("ObserveEvent:UpdateBtn:setting is_configured = TRUE")
+    is_configured <<- TRUE
+    print("ObserveEvent:UpdateBtn: Exit")
   })
   
   output$main_plot <- renderPlot({
-    if (is.null(filtered_main_plot())) {
+    print("renderPlot: ENTER")
+    
+    # make method reactive to input button
+    # (weird: reactive variable will only stay that way if de-referenced prior to any null return)
+    if(input$update_button){}
+    
+    print("is_configured=")
+    print(is_configured)
+    if (identical(is_configured,FALSE) ){
+      print("renderPlot:Not Configured: EXIT")
       return()
     }
+      
+    processRequestedData()
+    
+    
     
     num_of_box_countries = length(box_current_selected_indices)
     
     # Title like "Female Life Expectancy In 256 Countries"
     plot_title = sprintf("Life Expectancy In %d %s",
                          num_of_box_countries,(ifelse(num_of_box_countries>1, "Countries", "Country")))
+    
+    plt = NULL
         
     if(gender_requested=='Female'){
+      plt = ggplot(stack(female_dataset), aes(x = ind, y = values)) + geom_boxplot() 
       plot_title = paste("Female",plot_title)
       print("Female datset requested")
     } else if(gender_requested=='Male'){
+      plt = ggplot(stack(male_dataset), aes(x = ind, y = values)) + geom_boxplot()
       plot_title = paste("Male",plot_title)
       print("Male datset requested")
     } else if(gender_requested=='Both'){
+      df.melt = melt(both_dataset)
+      plt = ggplot(melt_df, aes(x=variable, y=value, color=Gender)) + geom_boxplot(position="dodge")
       plot_title = paste("Female and Male",plot_title)
       print("Both datsets requested")
     }else {
+      plt = ggplot(stack(female_dataset), aes(x = ind, y = values)) + geom_boxplot()
       plot_title = paste("Female",plot_title)
       print("Default Female datset requested")
     }
     
     
     
-    plt = ggplot(stack(filtered_main_plot()), aes(x = ind, y = values)) + 
-      geom_boxplot() + theme_minimal() + ggtitle(plot_title) +
+    plt = plt + 
+      theme_minimal() + ggtitle(plot_title) +
       theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) + 
       scale_y_continuous(name="Age", breaks=seq(0,90,10)) +
       scale_x_discrete(label=year_label_formatter, name="Year")
@@ -192,6 +297,7 @@ shinyServer(function(input, output) {
     #     geom_step(data = df2)
     # )
     
+    print("renderPlot: EXIT")
     return(plt)
   })
   
