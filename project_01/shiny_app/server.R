@@ -78,14 +78,14 @@ shinyServer(function(input, output) {
   processRequestedData <- function() {
     
     if(gender_requested=='Female'){
-      female_dataset <<- female_lexp %>% select(-Country.Code)
+      female_dataset <<- female_lexp[box_current_selected_indices,-'Country.Code']
     } else if(gender_requested=='Male'){
-      male_dataset <<- male_lexp %>% select(-Country.Code)
+      male_dataset <<- male_lexp [box_current_selected_indices,-'Country.Code']
     } else if(gender_requested=='Both'){
-      female_dataset <<- female_lexp %>% select(-Country.Code)
-      male_dataset <<- male_lexp %>% select(-Country.Code)
-      female_mod = female_lexp %>% mutate(Gender = as.factor("Female"))
-      male_mod = male_lexp %>% mutate(Gender = as.factor("Male"))
+      female_dataset <<- female_lexp[box_current_selected_indices,-'Country.Code']
+      male_dataset <<- male_lexp[box_current_selected_indices,-'Country.Code']
+      female_mod = (female_lexp[box_current_selected_indices,-'Country.Code']) %>% mutate(Gender = as.factor("Female"))
+      male_mod = (male_lexp[box_current_selected_indices,-'Country.Code']) %>% mutate(Gender = as.factor("Male"))
       both_dataset <<- rbind(female_mod,male_mod)
       
     }else { # default female
@@ -133,6 +133,12 @@ shinyServer(function(input, output) {
                                                              mode = 'multiple'
                                                              )
                                             ) # pre-select none
+  
+  output$dataset_table = DT::renderDataTable((female_lexp %>% left_join(country_names, by = "Country.Code") %>% select(-Country.Code))[,c(56,1:55)], server = FALSE,
+                                            selection = list(target = 'row',
+                                                             mode = 'multiple'
+                                            )
+  ) # pre-select none
   
   
   proxy_box_table = dataTableProxy('box_table')
@@ -234,6 +240,18 @@ shinyServer(function(input, output) {
     print("ObserveEvent:UpdateBtn: Exit")
   })
   
+  output$min_max_textview <- renderPrint({ "This is where values go" })
+  
+  
+  output$countries_textview <- renderPrint({ 
+    s = input$box_table_rows_selected
+    if (length(s)) {
+      cat('These countries were selected:\n\n')
+      names = country_names[input$box_table_rows_selected,1]
+      cat(names, sep = ', ')
+    } 
+    })
+  
   output$main_plot <- renderPlot({
     print("renderPlot: ENTER")
     
@@ -270,7 +288,7 @@ shinyServer(function(input, output) {
       print("Male datset requested")
     } else if(gender_requested=='Both'){
       df.melt = melt(both_dataset)
-      plt = ggplot(melt_df, aes(x=variable, y=value, color=Gender)) + geom_boxplot(position="dodge")
+      plt = ggplot(df.melt, aes(x=variable, y=value, color=Gender)) + geom_boxplot(position="dodge")
       plot_title = paste("Female and Male",plot_title)
       print("Both datsets requested")
     }else {

@@ -42,8 +42,8 @@ shinyUI(
                              selected = 1
             
           ),
-          h5("Number of countries selected for box plot: "),
-          h5("Number of countries selected for linear plot: "),
+          # h5("Number of countries selected for box plot: "),
+          # h5("Number of countries selected for linear plot: "),
           radioButtons("radio", label = "Choose min/max values to display",
                        choices = list("Min" = 1, "Max" = 2),
                        selected = 1
@@ -55,13 +55,19 @@ shinyUI(
           helpText("Select countries to display in the box plot."),
           actionButton('selectAll_box', 'Select All'),
           actionButton('clearAll_box', 'Clear All')
-        ),
-        conditionalPanel(
-          condition = 'input.tab_views == "linear_config"',
-          helpText("Select countries to display in the linear plot."),
-          actionButton('selectAll_linear', 'Select All'),
-          actionButton('clearAll_linear', 'Clear All')
         )
+        ,
+        conditionalPanel(
+          condition = 'input.tab_views == "dataset_view"',
+          helpText("Raw data currently used in plot.")
+        )
+        #,
+        # conditionalPanel(
+        #   condition = 'input.tab_views == "linear_config"',
+        #   helpText("Select countries to display in the linear plot."),
+        #   actionButton('selectAll_linear', 'Select All'),
+        #   actionButton('clearAll_linear', 'Clear All')
+        # )
         
     ),
     mainPanel(
@@ -72,12 +78,19 @@ shinyUI(
                  div(id = "plot-container",
                      tags$img(src = "images/spinner.gif",
                               id = "loading-spinner"),
-                     plotOutput("main_plot"))
+                     plotOutput("main_plot")),
+                 hr(),
+                 fluidRow(column(12, verbatimTextOutput("min_max_textview")))
                  ),
         tabPanel('Countries for Boxplot', value = 'box_config',
-                 DT::dataTableOutput('box_table')),
-        tabPanel('Countries for Linear', value = 'linear_config',
-                 DT::dataTableOutput('linear_table'))         
+                 DT::dataTableOutput('box_table'),
+                 hr(),
+                 fluidRow(column(12, verbatimTextOutput("countries_textview")))),
+        tabPanel('See The Data Set', value = 'dataset_view',
+                 DT::dataTableOutput('dataset_table'))
+        # ,
+        # tabPanel('Countries for Linear', value = 'linear_config',
+        #          DT::dataTableOutput('linear_table'))         
       )
       
 #      plotOutput("map")
