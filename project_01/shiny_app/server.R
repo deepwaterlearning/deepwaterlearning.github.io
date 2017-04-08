@@ -240,7 +240,10 @@ shinyServer(function(input, output) {
     print("ObserveEvent:UpdateBtn: Exit")
   })
   
-  output$min_max_textview <- renderPrint({ "This is where values go" })
+  output$min_max_textview <- renderPrint({
+    "Min/Max Values"
+    #(apply (female_lexp, 2, function(x) c(max (x,na.rm = TRUE), min(x,na.rm = TRUE))))[,-c(1,2)] 
+    })
   
   
   output$countries_textview <- renderPrint({ 
