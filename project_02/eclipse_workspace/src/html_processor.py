@@ -52,7 +52,8 @@ final_csv_files = {}
 
 # these urls to be loaded or scrapped
 urls_to_scan = {"http://beststore.addglobal24support.com": "http://beststore.addglobal24support.com" }
-html_files_to_process = {"http://beststore.addglobal24support.com": "/Users/intothelight/nycdatascience/tmp/data_dump/scraper_html_files/2017-04-26+17%3A49%3A51.598328__http%3A%2F%2Fbeststore.addglobal24support.com__http%3A%2F%2Furlquery.net%2Freport.php%3Fid%3D1493241203695.html" }
+html_files_to_process = {"http://www.unam.mx": "/Users/intothelight/nycdatascience/tmp/data_dump/scraper_html_files/2017-04-25+16%3A40%3A27.044062__https%3A%2F%2Fwww.unam.mx__http%3A%2F%2Furlquery.net%2Freport.php%3Fid%3D1493150634930.html" ,
+                         "http://beststore.addglobal24support.com": "/Users/intothelight/nycdatascience/tmp/data_dump/scraper_html_files/2017-04-26+17%3A49%3A51.598328__http%3A%2F%2Fbeststore.addglobal24support.com__http%3A%2F%2Furlquery.net%2Freport.php%3Fid%3D1493241203695.html"}
 
 
 def check_url(url):
@@ -151,252 +152,236 @@ logging.info("Selected url to scan: %s", website_url)
 # BEGIN HTML FILE PROCESSING LOOP
 
 
+fieldnames = ["Url", "IP.Address", "ASN", "IP.Location",
+             "Report.Date", "UrlQuery.Alerts", "User.Agent",
+             "Snort", "Suricata", "Fortinet", "MDL", "DNS.BH",
+             "MS.DNS", "Openfish", "Phishtank", "Spamhaus",
+             "JS.ES", "JS.EE", "JS.EW", "HTTP.Tranx"  ]
 
-url_key = random.choice(html_files_to_process.keys())
-logging.info("Selected key for processing: %s", url_key)
+# open up csv file
+full_datafilepath = "{}/scanned_urls.csv".format(processed_files_location)
+csv_file = ""
+writer = ""
+if not os.path.isfile(full_datafilepath):
+    csv_file = open(full_datafilepath, 'wb')
+    writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+    writer.writeheader()
+else:
+    csv_file = open(full_datafilepath, 'ab')
+    writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
 
-scanned_filename = html_files_to_process[url_key]
-logging.info("Actual file to process: %s", scanned_filename)
+while len(html_files_to_process.keys()) > 0:
+    url_key = random.choice(html_files_to_process.keys())
+    logging.info("Selected key for processing: %s", url_key)
 
-the_file = open(scanned_filename, "r")
-file_contents = the_file.read()
-webpage = BeautifulSoup(file_contents,'html.parser')
-#logging.info(webpage.prettify())
+    scanned_filename = html_files_to_process[url_key]
+    logging.info("Actual file to process: %s", scanned_filename)
 
-# data of interest
-ip_address = ""
-asn = ""
-location = ""
-report_date = ""
-urlquery_alerts = 0
-user_agent = ""
-snort = 0
-suricata = 0
-fortinet = 0
-mdl = 0
-dns_bh = 0
-ms_dns = 0
-openfish = 0
-phishtank = 0
-spamhaus = 0
-jses = 0
-jsee = 0
-jsew = 0
-http_tranx = 0
+    the_file = open(scanned_filename, "r")
+    file_contents = the_file.read()
+    webpage = BeautifulSoup(file_contents,'html.parser')
 
-no_alerts = "No alerts detected"
+  
 
-# we'll cycle through all the page sections
-all_h2_elements = webpage.findAll('h2')
-for tag in all_h2_elements:
-    section_text = tag.get_text()
-    if section_text == "Overview":
-        logging.info("Overview h2 element found")
-        table_element = tag.findNextSibling('table')
-        all_cells = table_element.tbody.findAll("td")
-        logging.info("total number of <td> cells:%s", len(all_cells))
-        i = 0
-        logging.info("URL=%s", all_cells[1].contents[0].strip())
-        logging.info("IP=%s", all_cells[4].contents[0].strip())
-        logging.info("ASN=%s", all_cells[6].contents[0].strip())
-        logging.info("Location=%s", all_cells[8].contents[0]['title'])
-        logging.info("Report Completed Date=%s", all_cells[10].contents[0].strip())
-        logging.info("Report Status=%s", all_cells[12].contents[0].contents[0])
-        logging.info("urlQuery Alerts=%s", all_cells[14].contents[0].strip())
-        for cell in all_cells:
-            logging.info("cell content:%s, index=%s",cell.contents[0], i)
-            i = i + 1
-    elif section_text == "Settings":
-        logging.info("Settings h2 element found")  
-        table_element = tag.findNextSibling('table')
-        all_cells = table_element.tbody.findAll("td")
-        logging.info("total number of <td> cells:%s", len(all_cells))
-        i = 0
-        for cell in all_cells:
-            if not cell.contents:
-                value = "NA"
+    # data of interest: must be same as fieldnames above
+    observation = {"Url":url_key, "IP.Address":"NA", "ASN":"NA", "IP.Location":"NA",
+                   "Report.Date":"NA", "UrlQuery.Alerts":0, "User.Agent":"NA",
+                   "Snort":0, "Suricata":0, "Fortinet":0, "MDL":0, "DNS.BH":0,
+                   "MS.DNS":0, "Openfish":0, "Phishtank":0, "Spamhaus":0,
+                   "JS.ES":0, "JS.EE":0, "JS.EW":0, "HTTP.Tranx":0  }
+    url_of_website = url_key
+    
+    # we'll cycle through all the page sections
+    all_h2_elements = webpage.findAll('h2')
+    for tag in all_h2_elements:
+        section_text = tag.get_text()
+        if section_text == "Overview":
+            logging.info("Overview h2 element found")
+            table_element = tag.findNextSibling('table')
+            all_cells = table_element.tbody.findAll("td")
+            logging.info("total number of <td> cells:%s", len(all_cells))
+            logging.info("URL=%s", all_cells[1].contents[0].strip())
+            observation["IP.Address"] = all_cells[4].contents[0].strip()
+            observation["ASN"] = all_cells[6].contents[0].strip()
+            observation["IP.Location"] = all_cells[8].contents[0]['title']
+            observation["Report.Date"] = all_cells[10].contents[0].strip()
+            logging.info("IP=%s", observation["IP.Address"])
+            logging.info("ASN=%s", observation["ASN"])
+            logging.info("IP Location=%s", observation["IP.Location"])
+            logging.info("Report Completed Date=%s", observation["Report.Date"])
+            logging.info("Report Status=%s", all_cells[12].contents[0].contents[0])
+            has_table = all_cells[14].find("table")
+            if has_table:
+                observation["UrlQuery.Alerts"] = 1
             else:
-                value = cell.contents[0]    
-            logging.info("cell content:%s, index=%s",value, i)
-            i = i + 1
-        logging.info("User Agent=%s", all_cells[1].contents[0].strip())    
-    elif section_text == "Intrusion Detection Systems":
-        logging.info("Intrusion Detection Systems h2 element found")  
-        table_element = tag.findNextSibling('table')
-        all_cells = table_element.tbody.findAll("td")
-        logging.info("total number of <td> cells:%s", len(all_cells))
-        i = 0
-        for cell in all_cells:
-            if not cell.contents:
-                value = "NA"
-            else:
-                value = cell.contents[0]    
-            logging.info("cell content:%s, index=%s",value, i)
-            i = i + 1
-        logging.info("Snort=%s", all_cells[1].contents[0].strip())
-        logging.info("Suricata=%s", all_cells[3].contents[0].strip())   
-                 
-    elif section_text == "Blacklists":
-        logging.info("Blacklists h2 element found")
-        table_element = tag.findNextSibling('table')
-        
-        row = table_element.tbody.tr
-        has_table = row.find("table")
-        if has_table:
-            fortinet = 1
-        else:
-            fortinet = 0
-        row = row.findNextSibling("tr")
-        has_table = row.find("table")
-        if has_table:
-            mdl = 1
-        else:
-            mdl = 0
-        row = row.findNextSibling("tr")
-        has_table = row.find("table")
-        if has_table:
-            dns_bh = 1
-        else:
-            dns_bh = 0
-        row = row.findNextSibling("tr")
-        has_table = row.find("table")
-        if has_table:
-            ms_dns = 1
-        else:
-            ms_dns = 0
-        row = row.findNextSibling("tr")
-        has_table = row.find("table")
-        if has_table:
-            openfish = 1
-        else:
-            openfish = 0
-        row = row.findNextSibling("tr")
-        has_table = row.find("table")
-        if has_table:
-            phishtank = 1
-        else:
-            phishtank = 0 
-        row = row.findNextSibling("tr")
-        has_table = row.find("table")
-        if has_table:
-            spamhaus = 1
-        else:
-            spamhaus = 0 
-        
-#        all_cells = table_element.tbody.findAll("td")
-#        logging.info("total number of <td> cells:%s", len(all_cells))
-#         if len(all_cells) > 14:
-#             row = table_element.tbody.tr
-#             has_table = row.find("table")
-#             if has_table:
-#                 fortinet = 1
-#             else:
-#                 fortinet = 0
-#             row = row.findNextSibling("tr")
-#             has_table = row.find("table")
-#             if has_table:
-#                 mdl = 1
-#             else:
-#                 mdl = 0
-#             row = row.findNextSibling("tr")
-#             has_table = row.find("table")
-#             if has_table:
-#                 dns_bh = 1
-#             else:
-#                 dns_bh = 0
-#             row = row.findNextSibling("tr")
-#             has_table = row.find("table")
-#             if has_table:
-#                 ms_dns = 1
-#             else:
-#                 ms_dns = 0
-#             row = row.findNextSibling("tr")
-#             has_table = row.find("table")
-#             if has_table:
-#                 openfish = 1
-#             else:
-#                 openfish = 0
-#             row = row.findNextSibling("tr")
-#             has_table = row.find("table")
-#             if has_table:
-#                 phishtank = 1
-#             else:
-#                 phishtank = 0 
-#             row = row.findNextSibling("tr")
-#             has_table = row.find("table")
-#             if has_table:
-#                 spamhaus = 1
-#             else:
-#                 spamhaus = 0                
-#             # there are some tables in here
-#         else:          
-#             i = 0
-#             for cell in all_cells:
-#                 if not cell.contents:
-#                     value = "NA"
-#                 else:
-#                     value = cell.contents[0]    
-#                 logging.info("cell content:%s, index=%s",value, i)
-#                 i = i + 1  
-#             # 14 td elements means no alerts detected anywhere
-#                  
-#             fortinet = 0  # all_cells[1].contents[0].strip()
-#             mdl = 0       # all_cells[3].contents[0].strip()
-#             dns_bh = 0    # all_cells[5].contents[0].strip()
-#             ms_dns = 0    # all_cells[7].contents[0].strip()
-#             openfish = 0  # all_cells[9].contents[0].strip()
-#             phishtank = 0 # all_cells[11].contents[0].strip()
-#             spamhaus = 0  # all_cells[13].contents[0].strip()
+                observation["UrlQuery.Alerts"] = 0
             
-        logging.info("Fortinet=%s", fortinet)  
-        logging.info("MDL=%s", mdl)  
-        logging.info("DNS_BH=%s", dns_bh) 
-        logging.info("MS_DNS=%s", ms_dns)
-        logging.info("OpenPhish=%s", openfish)
-        logging.info("PhishTank=%s", phishtank)
-        logging.info("Spamhaus=%s", spamhaus)    
-        
-    elif section_text == "JavaScript":
-        logging.info("JavaScript h2 element found")
-        next_h3_tags = webpage.findAll("h3", text=re.compile("Executed"))
-        logging.info("total number of <h3> cells:%s", len(next_h3_tags))
-        i = 0
-        for cell in next_h3_tags:
-            if not cell.contents:
-                value = "NA"
+            logging.info("urlQuery Alerts=%s", observation["UrlQuery.Alerts"])
+            i = 0
+            for cell in all_cells:
+                logging.info("cell content:%s, index=%s",cell.contents[0], i)
+                i = i + 1
+            
+        elif section_text == "Settings":
+            logging.info("Settings h2 element found")  
+            table_element = tag.findNextSibling('table')
+            all_cells = table_element.tbody.findAll("td")
+            logging.info("total number of <td> cells:%s", len(all_cells))
+            i = 0
+            for cell in all_cells:
+                if not cell.contents:
+                    value = "NA"
+                else:
+                    value = cell.contents[0]    
+                logging.info("cell content:%s, index=%s",value, i)
+                i = i + 1
+                
+            observation["User.Agent"] = all_cells[1].contents[0].strip()    
+            logging.info("User Agent=%s", observation["User.Agent"]) 
+           
+        elif section_text == "Intrusion Detection Systems":
+            logging.info("Intrusion Detection Systems h2 element found")  
+            table_element = tag.findNextSibling('table')
+            
+            row = table_element.tbody.tr
+            has_table = row.find("table")
+            if has_table:
+                observation["Snort"] = 1
             else:
-                value = cell.contents[0]    
-            logging.info("cell content:%s, index=%s",value, i)
-            i = i + 1
-        #logging.info("Spamhaus=%s", all_cells[13].contents[0].strip())
-        num_of_tranx = "0"
-        searchObj = re.search( r'(\d+)', next_h3_tags[0].contents[0], re.M|re.I)
-        if searchObj:
-            logging.info("js executed scripts tranx search found:%s", searchObj.group())
-            num_of_tranx = searchObj.group()
-        logging.info("JS_ES=%s", num_of_tranx)
-        num_of_tranx = "0"
-        searchObj = re.search( r'(\d+)', next_h3_tags[1].contents[0], re.M|re.I)
-        if searchObj:
-            logging.info("js executed evals tranx search found:%s", searchObj.group())
-            num_of_tranx = searchObj.group()
-        logging.info("JS_EE=%s", num_of_tranx)
-        num_of_tranx = "0"
-        searchObj = re.search( r'(\d+)', next_h3_tags[2].contents[0], re.M|re.I)
-        if searchObj:
-            logging.info("js executed writes tranx search found:%s", searchObj.group())
-            num_of_tranx = searchObj.group()
-        logging.info("JS_EW=%s", num_of_tranx)
-    elif section_text.startswith("HTTP Transactions"):
-        logging.info("HTTP Transactions h2 element found: %s", section_text)
-        num_of_tranx = "0"
-        searchObj = re.search( r'(\d+)', section_text, re.M|re.I)
-        if searchObj:
-            logging.info("http tranx search found:%s", searchObj.group())
-            num_of_tranx = searchObj.group()
-        logging.info("HTTP Tranx=%s", num_of_tranx)    
-    else:
-        logging.info("Ignoring this h2 element: %s", section_text)            
+                observation["Snort"] = 0
+                
+            row = row.findNextSibling("tr")
+            has_table = row.find("table")
+            if has_table:
+                observation["Suricata"] = 1
+            else:
+                observation["Suricata"] = 0  
+            
+            logging.info("Snort=%s", observation["Snort"])
+            logging.info("Suricata=%s", observation["Suricata"])   
+                 
+        elif section_text == "Blacklists":
+            logging.info("Blacklists h2 element found")
+            table_element = tag.findNextSibling('table')
+        
+            row = table_element.tbody.tr
+            has_table = row.find("table")
+            if has_table:
+                observation["Fortinet"] = 1
+            else:
+                observation["Fortinet"] = 0
+                
+            row = row.findNextSibling("tr")
+            has_table = row.find("table")
+            if has_table:
+                observation["MDL"] = 1
+            else:
+                observation["MDL"] = 0
+                
+            row = row.findNextSibling("tr")
+            has_table = row.find("table")
+            if has_table:
+                observation["DNS.BH"] = 1
+            else:
+                observation["DNS.BH"] = 0
+                
+            row = row.findNextSibling("tr")
+            has_table = row.find("table")
+            if has_table:
+                observation["MS.DNS"] = 1
+            else:
+                observation["MS.DNS"] = 0
+                
+            row = row.findNextSibling("tr")
+            has_table = row.find("table")
+            if has_table:
+                observation["Openfish"] = 1
+            else:
+                observation["Openfish"] = 0
+                
+            row = row.findNextSibling("tr")
+            has_table = row.find("table")
+            if has_table:
+                observation["Phishtank"] = 1
+            else:
+                observation["Phishtank"] = 0
+                
+            row = row.findNextSibling("tr")
+            has_table = row.find("table")
+            if has_table:
+                observation["Spamhaus"] = 1
+            else:
+                observation["Spamhaus"] = 0
+                    
+            logging.info("Fortinet=%s", observation["Fortinet"])  
+            logging.info("MDL=%s", observation["MDL"])  
+            logging.info("DNS_BH=%s", observation["DNS.BH"]) 
+            logging.info("MS_DNS=%s", observation["MS.DNS"])
+            logging.info("OpenPhish=%s", observation["Openfish"])
+            logging.info("PhishTank=%s", observation["Phishtank"])
+            logging.info("Spamhaus=%s", observation["Spamhaus"])    
+        
+        elif section_text == "JavaScript":
+            logging.info("JavaScript h2 element found")
+            next_h3_tags = webpage.findAll("h3", text=re.compile("Executed"))
+            logging.info("total number of <h3> cells:%s", len(next_h3_tags))
+            i = 0
+            for cell in next_h3_tags:
+                if not cell.contents:
+                    value = "NA"
+                else:
+                    value = cell.contents[0]    
+                logging.info("cell content:%s, index=%s",value, i)
+                i = i + 1
+        
+            num_of_tranx = "0"
+            searchObj = re.search( r'(\d+)', next_h3_tags[0].contents[0], re.M|re.I)
+            if searchObj:
+                logging.info("js executed scripts tranx search found:%s", searchObj.group())
+                num_of_tranx = searchObj.group()
+            observation["JS.ES"] = int(num_of_tranx)
+            logging.info("JS_ES=%s", observation["JS.ES"])
+        
+            num_of_tranx = "0"
+            searchObj = re.search( r'(\d+)', next_h3_tags[1].contents[0], re.M|re.I)
+            if searchObj:
+                logging.info("js executed evals tranx search found:%s", searchObj.group())
+                num_of_tranx = searchObj.group()
+            observation["JS.EE"] = int(num_of_tranx)
+            logging.info("JS_EE=%s", observation["JS.EE"])
+        
+            num_of_tranx = "0"
+            searchObj = re.search( r'(\d+)', next_h3_tags[2].contents[0], re.M|re.I)
+            if searchObj:
+                logging.info("js executed writes tranx search found:%s", searchObj.group())
+                num_of_tranx = searchObj.group()
+            observation["JS.EW"] = int(num_of_tranx)
+            logging.info("JS_EW=%s", observation["JS.EW"])
+        
+        elif section_text.startswith("HTTP Transactions"):
+            logging.info("HTTP Transactions h2 element found: %s", section_text)
+            num_of_tranx = "0"
+            searchObj = re.search( r'(\d+)', section_text, re.M|re.I)
+            if searchObj:
+                logging.info("http tranx search found:%s", searchObj.group())
+                num_of_tranx = searchObj.group()
+            observation["HTTP.Tranx"] = int(num_of_tranx)
+            logging.info("HTTP Tranx=%s", observation["HTTP.Tranx"])    
+        
+        else:
+            logging.info("Ignoring this h2 element: %s", section_text)            
+
+    
+    # write observation to file
+    writer.writerow(observation)
+    logging.info("Wrote dictionary to cvs file: %s", observation)
+    del html_files_to_process[url_key]
+    logging.debug("Deleted processed url: %s", url_key)
+    # END WHILE LOOP
+
+ 
+
+csv_file.close()
 
 logging.info("Program complete.")
 
