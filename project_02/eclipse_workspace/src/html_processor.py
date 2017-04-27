@@ -239,70 +239,114 @@ for tag in all_h2_elements:
     elif section_text == "Blacklists":
         logging.info("Blacklists h2 element found")
         table_element = tag.findNextSibling('table')
-        all_cells = table_element.tbody.findAll("td")
-        logging.info("total number of <td> cells:%s", len(all_cells))
-        if len(all_cells) > 14:
-            row = table_element.tbody.tr
-            has_table = row.find("table")
-            if has_table:
-                fortinet = 1
-            else:
-                fortinet = 0
-            row = row.findNextSibling("tr")
-            has_table = row.find("table")
-            if has_table:
-                mdl = 1
-            else:
-                mdl = 0
-            row = row.findNextSibling("tr")
-            has_table = row.find("table")
-            if has_table:
-                dns_bh = 1
-            else:
-                dns_bh = 0
-            row = row.findNextSibling("tr")
-            has_table = row.find("table")
-            if has_table:
-                ms_dns = 1
-            else:
-                ms_dns = 0
-            row = row.findNextSibling("tr")
-            has_table = row.find("table")
-            if has_table:
-                openfish = 1
-            else:
-                openfish = 0
-            row = row.findNextSibling("tr")
-            has_table = row.find("table")
-            if has_table:
-                phishtank = 1
-            else:
-                phishtank = 0 
-            row = row.findNextSibling("tr")
-            has_table = row.find("table")
-            if has_table:
-                spamhaus = 1
-            else:
-                spamhaus = 0                
-            # there are some tables in here
-        else:          
-            i = 0
-            for cell in all_cells:
-                if not cell.contents:
-                    value = "NA"
-                else:
-                    value = cell.contents[0]    
-                logging.info("cell content:%s, index=%s",value, i)
-                i = i + 1  
-            # 14 td elements means no alerts detected anywhere
-                 
-            fortinet = 0  # all_cells[1].contents[0].strip()
-            mdl = 0       # all_cells[3].contents[0].strip()
-            dns_bh = 0    # all_cells[5].contents[0].strip()
-            ms_dns = 0    # all_cells[7].contents[0].strip()
-            openfish = 0  # all_cells[9].contents[0].strip()
-            phishtank = 0 # all_cells[11].contents[0].strip()
-            spamhaus = 0  # all_cells[13].contents[0].strip()
+        
+        row = table_element.tbody.tr
+        has_table = row.find("table")
+        if has_table:
+            fortinet = 1
+        else:
+            fortinet = 0
+        row = row.findNextSibling("tr")
+        has_table = row.find("table")
+        if has_table:
+            mdl = 1
+        else:
+            mdl = 0
+        row = row.findNextSibling("tr")
+        has_table = row.find("table")
+        if has_table:
+            dns_bh = 1
+        else:
+            dns_bh = 0
+        row = row.findNextSibling("tr")
+        has_table = row.find("table")
+        if has_table:
+            ms_dns = 1
+        else:
+            ms_dns = 0
+        row = row.findNextSibling("tr")
+        has_table = row.find("table")
+        if has_table:
+            openfish = 1
+        else:
+            openfish = 0
+        row = row.findNextSibling("tr")
+        has_table = row.find("table")
+        if has_table:
+            phishtank = 1
+        else:
+            phishtank = 0 
+        row = row.findNextSibling("tr")
+        has_table = row.find("table")
+        if has_table:
+            spamhaus = 1
+        else:
+            spamhaus = 0 
+        
+#        all_cells = table_element.tbody.findAll("td")
+#        logging.info("total number of <td> cells:%s", len(all_cells))
+#         if len(all_cells) > 14:
+#             row = table_element.tbody.tr
+#             has_table = row.find("table")
+#             if has_table:
+#                 fortinet = 1
+#             else:
+#                 fortinet = 0
+#             row = row.findNextSibling("tr")
+#             has_table = row.find("table")
+#             if has_table:
+#                 mdl = 1
+#             else:
+#                 mdl = 0
+#             row = row.findNextSibling("tr")
+#             has_table = row.find("table")
+#             if has_table:
+#                 dns_bh = 1
+#             else:
+#                 dns_bh = 0
+#             row = row.findNextSibling("tr")
+#             has_table = row.find("table")
+#             if has_table:
+#                 ms_dns = 1
+#             else:
+#                 ms_dns = 0
+#             row = row.findNextSibling("tr")
+#             has_table = row.find("table")
+#             if has_table:
+#                 openfish = 1
+#             else:
+#                 openfish = 0
+#             row = row.findNextSibling("tr")
+#             has_table = row.find("table")
+#             if has_table:
+#                 phishtank = 1
+#             else:
+#                 phishtank = 0 
+#             row = row.findNextSibling("tr")
+#             has_table = row.find("table")
+#             if has_table:
+#                 spamhaus = 1
+#             else:
+#                 spamhaus = 0                
+#             # there are some tables in here
+#         else:          
+#             i = 0
+#             for cell in all_cells:
+#                 if not cell.contents:
+#                     value = "NA"
+#                 else:
+#                     value = cell.contents[0]    
+#                 logging.info("cell content:%s, index=%s",value, i)
+#                 i = i + 1  
+#             # 14 td elements means no alerts detected anywhere
+#                  
+#             fortinet = 0  # all_cells[1].contents[0].strip()
+#             mdl = 0       # all_cells[3].contents[0].strip()
+#             dns_bh = 0    # all_cells[5].contents[0].strip()
+#             ms_dns = 0    # all_cells[7].contents[0].strip()
+#             openfish = 0  # all_cells[9].contents[0].strip()
+#             phishtank = 0 # all_cells[11].contents[0].strip()
+#             spamhaus = 0  # all_cells[13].contents[0].strip()
             
         logging.info("Fortinet=%s", fortinet)  
         logging.info("MDL=%s", mdl)  
