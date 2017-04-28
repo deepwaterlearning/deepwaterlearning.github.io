@@ -20,6 +20,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 from bs4 import BeautifulSoup
+from copy import deepcopy
 
 
 # Needed directories
@@ -140,9 +141,7 @@ while still_scanning:
         logging.warn("Target site not available, skipping: %s", website_url)
         skipped_urls[website_url] = website_url
         continue    
-        
-            
-      
+         
       
     session.get(scanner_primer_url)
     url_box_id = "url"
@@ -188,8 +187,12 @@ while still_scanning:
         html_file.write(session.page_source)
         html_file.close()
         html_files_to_process[website_url] = full_filepath
-        # remove from original list
-        # need to deep copy urls from other dictionaries and save
+        del urls_to_scan[website_url]
+        new_set_to_scan = deepcopy(urls_to_scan)
+        if len(skipped_urls.keys()) > 0:
+            new_set_to_scan.update(skipped_urls)
+        save_urls_to_scan(new_set_to_scan)
+        
       
       
 session.quit()
