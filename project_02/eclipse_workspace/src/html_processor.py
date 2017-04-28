@@ -10,15 +10,10 @@ import urllib
 import io
 import logging
 import os
-import sys
 import random
 import csv
-import sqlite3
 from datetime import datetime
 from selenium import webdriver
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
 from bs4 import BeautifulSoup
 from copy import deepcopy
 
@@ -59,28 +54,46 @@ final_csv_files = {}
 def load_urls_to_scan():
     logging.debug("Enter:load_urls_to_scan")
     full_datafilepath = "{}/urls_to_scan.txt".format(processed_files_location)
-    if not os.path.isfile(full_datafilepath):
-        logging.info("File that contains urls not present:%s",full_datafilepath)
+    if os.path.isfile(full_datafilepath):
+        with open(full_datafilepath,'r') as f:
+            for line in f:
+                new_url = line.strip()
+                if new_url:
+                    urls_to_scan[new_url] = new_url
         logging.debug("Exit:load_urls_to_scan")
         return
-    with open(full_datafilepath,'r') as f:
-        for line in f:
-            new_url = line.strip()
-            if new_url:
-                urls_to_scan[new_url] = new_url
-    logging.debug("Exit:load_urls_to_scan")
+    else:
+        site_for_urls = "https://moz.com/top500"
+        logging.debug("File that contains urls not present:%s",full_datafilepath)
+        logging.debug("Will attempt to scrape this website for urls:%s", site_for_urls)
+        #s = requests.Session()
+        session.get(site_for_urls)
+        time.sleep(5)
+        text = session.page_source
+        soup = BeautifulSoup(text,'html.parser')
+        all_tags = soup.findAll("td", { "class" : "url" })
+        logging.debug("Number of elements found:%s", len(all_tags))
+        for tag in all_tags:
+            value = tag.a["href"]
+            urls_to_scan[value] = value
+            logging.debug("url:%s", value)
+        if len(urls_to_scan.keys()) > 0:
+            save_urls_to_scan(urls_to_scan)
+        logging.debug("Exit:load_urls_to_scan")
+        return
 
 def save_urls_to_scan(the_dict):
     logging.debug("Enter:save_urls_to_scan")
     full_datafilepath = "{}/urls_to_scan.txt".format(processed_files_location)
-    if not os.path.isfile(full_datafilepath):
-        logging.info("File that contains urls not present:%s",full_datafilepath)
-        logging.debug("Exit:load_urls_to_scan")
-        return
+#     if not os.path.isfile(full_datafilepath):
+#         logging.info("File that contains urls not present:%s",full_datafilepath)
+#         logging.debug("Exit:save_urls_to_scan")
+#         return
     the_urls = the_dict.keys()
     logging.debug("Will save %s urls to file", len(the_urls))
+    urls_w_newlines = ('\n'.join(the_urls) + '\n')
     with open(full_datafilepath, "w") as f:
-        f.writelines( the_urls )
+        f.writelines(urls_w_newlines)
     logging.debug("Exit:save_urls_to_scan")
 
 def save_html_files_to_process(the_dict):
@@ -88,28 +101,33 @@ def save_html_files_to_process(the_dict):
     logging.debug("Exit:save_html_files_to_process")
     
     
-#     w = csv.writer(open("output.csv", "w"))
-#     for key, val in dict.items():
-#         w.writerow([key, val])
 
 def check_url(url):
-    response_code = requests.head(url)
-    logging.debug("url:%s , status code:%s", url ,response_code.status_code)
+    response_code = ""
+    try:
+        response_code = requests.head(url)
+    except requests.exceptions.ConnectionError as ex:
+        logging.debug("Connection error:%s", ex)
+        return False
+    except requests.exceptions.RequestException as ex:
+        logging.debug("Request error:%s", ex)
+        return False
     return response_code.status_code < 400
 
 scanner_url = "http://urlquery.net/api/v2/post.php?url=https://www.va.gov"
 scanner_primer_url = "http://urlquery.net/index.php"
 scanner_report_url = "http://urlquery.net/report.php?id="
+scanner_report_url = "http://urlquery.net/queued.php?id="
 website_url = "https://www.va.gov"
 
-
+#session = requests.session()
+session = webdriver.PhantomJS(executable_path="/Users/intothelight/anaconda/pkgs/phantomjs-2.1.1-0/bin/phantomjs")
+session.set_window_size(1439, 799)
 
 load_urls_to_scan()
 logging.debug("Loaded urls to scan. Total amount:%s", len(urls_to_scan.keys()))
     
-session = requests.session()
-session = webdriver.PhantomJS(executable_path="/Users/intothelight/anaconda/pkgs/phantomjs-2.1.1-0/bin/phantomjs")
-session.set_window_size(1439, 799)
+
 
 # Here we would start our loop to process urls to be scanned
 # BEGIN SCAN LOOP
@@ -154,11 +172,13 @@ while still_scanning:
     waiting = True
     wait_time = 15
     report_status_id = "status"
+    attempts_to_submit = 0
     while waiting:
       
         time.sleep(wait_time)
         logging.debug("Current browser url:%s", session.current_url)
         matchObj = re.search(r"report",session.current_url, re.M|re.I)
+        matchQueObj = re.search(r"queued",session.current_url, re.M|re.I)
         if matchObj:
             logging.debug("Report url was matched")
             try:
@@ -170,12 +190,26 @@ while still_scanning:
                     waiting = False
                     html_ready_to_save = True
                   
-            except:
-                logging.warn("Exception")
+            except Exception as ex:
+                logging.warn("Exception:%s", ex)
                 logging.debug("Current browser url:%s", session.current_url)
+                skipped_urls[website_url] = website_url
+                waiting = False
+                html_ready_to_save = False
                   
         else:
-            logging.debug("Report url not matched yet")       
+            if matchQueObj:
+                logging.debug("Scan is queued")
+                continue
+            else:
+                attempts_to_submit = attempts_to_submit + 1
+                if attempts_to_submit > 3:
+                    logging.debug("Submit probably failed. Skipping. Current url:%s", session.current_url)
+                    attempts_to_submit = 0
+                    skipped_urls[website_url] = website_url
+                    waiting = False
+                    html_ready_to_save = False
+                   
                
       
     if html_ready_to_save:
