@@ -96,6 +96,22 @@ def save_urls_to_scan(the_dict):
         f.writelines(urls_w_newlines)
     logging.debug("Exit:save_urls_to_scan")
 
+def load_html_files_to_process():
+    logging.debug("Enter:load_html_files_to_process")
+    full_datafilepath = "{}/html_files_to_process.csv".format(processed_files_location)
+    if os.path.isfile(full_datafilepath):
+        with open(full_datafilepath,'r') as f:
+            for line in f:
+                currentline = line.strip().split(",")
+                if currentline:
+                    html_files_to_process[currentline[0]] = currentline[1]
+        logging.debug("html_files_to_process.csv has %s files to process",len(html_files_to_process.keys()))
+        logging.debug("Exit:load_html_files_to_process")
+        return
+    else:
+        logging.debug("html_files_to_process.csv not present at:%s",full_datafilepath)
+
+
 def save_html_files_to_process(the_dict):
     logging.debug("Enter:save_html_files_to_process")
     logging.debug("Exit:save_html_files_to_process")
@@ -124,10 +140,10 @@ website_url = "https://www.va.gov"
 session = webdriver.PhantomJS(executable_path="/Users/intothelight/anaconda/pkgs/phantomjs-2.1.1-0/bin/phantomjs")
 session.set_window_size(1439, 799)
 
-load_urls_to_scan()
+#load_urls_to_scan()
 logging.debug("Loaded urls to scan. Total amount:%s", len(urls_to_scan.keys()))
     
-
+load_html_files_to_process()
 
 # Here we would start our loop to process urls to be scanned
 # BEGIN SCAN LOOP
@@ -153,12 +169,12 @@ while still_scanning:
         continue
           
           
-    if check_url(website_url):
-        logging.debug("Target site is up")
-    else:
-        logging.warn("Target site not available, skipping: %s", website_url)
-        skipped_urls[website_url] = website_url
-        continue    
+#     if check_url(website_url):
+#         logging.debug("Target site is up")
+#     else:
+#         logging.warn("Target site not available, skipping: %s", website_url)
+#         skipped_urls[website_url] = website_url
+#         continue    
          
       
     session.get(scanner_primer_url)
