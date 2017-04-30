@@ -1,7 +1,7 @@
 '''
 Created on Apr 25, 2017
 
-@author: intothelight
+@author: J.Kelley
 '''
 import requests
 import time
@@ -46,10 +46,6 @@ urls_to_scan = {}
 html_files_to_process = {}
 final_csv_files = {}
 
-# these urls to be loaded or scrapped
-#urls_to_scan = {"http://beststore.addglobal24support.com": "http://beststore.addglobal24support.com" }
-# html_files_to_process = {"http://www.unam.mx": "/Users/intothelight/nycdatascience/tmp/data_dump/scraper_html_files/2017-04-25+16%3A40%3A27.044062__https%3A%2F%2Fwww.unam.mx__http%3A%2F%2Furlquery.net%2Freport.php%3Fid%3D1493150634930.html" ,
-#                          "http://beststore.addglobal24support.com": "/Users/intothelight/nycdatascience/tmp/data_dump/scraper_html_files/2017-04-26+17%3A49%3A51.598328__http%3A%2F%2Fbeststore.addglobal24support.com__http%3A%2F%2Furlquery.net%2Freport.php%3Fid%3D1493241203695.html"}
 
 def load_urls_to_scan():
     logging.debug("Enter:load_urls_to_scan")
@@ -60,13 +56,14 @@ def load_urls_to_scan():
                 new_url = line.strip()
                 if new_url:
                     urls_to_scan[new_url] = new_url
+        logging.debug("load_urls_to_scan: number of urls:%s", len(urls_to_scan.keys()))
         logging.debug("Exit:load_urls_to_scan")
         return
     else:
         site_for_urls = "https://moz.com/top500"
         logging.debug("File that contains urls not present:%s",full_datafilepath)
         logging.debug("Will attempt to scrape this website for urls:%s", site_for_urls)
-        #s = requests.Session()
+        #Using session created in main program
         session.get(site_for_urls)
         time.sleep(5)
         text = session.page_source
@@ -79,18 +76,15 @@ def load_urls_to_scan():
             logging.debug("url:%s", value)
         if len(urls_to_scan.keys()) > 0:
             save_urls_to_scan(urls_to_scan)
+        logging.debug("load_urls_to_scan: number of urls:%s", len(urls_to_scan.keys()))
         logging.debug("Exit:load_urls_to_scan")
         return
 
 def save_urls_to_scan(the_dict):
     logging.debug("Enter:save_urls_to_scan")
     full_datafilepath = "{}/urls_to_scan.txt".format(processed_files_location)
-#     if not os.path.isfile(full_datafilepath):
-#         logging.info("File that contains urls not present:%s",full_datafilepath)
-#         logging.debug("Exit:save_urls_to_scan")
-#         return
     the_urls = the_dict.keys()
-    logging.debug("Will save %s urls to file", len(the_urls))
+    logging.debug("save_urls_to_scan: Will save %s urls to file", len(the_urls))
     urls_w_newlines = ('\n'.join(the_urls) + '\n')
     with open(full_datafilepath, "w") as f:
         f.writelines(urls_w_newlines)
@@ -112,40 +106,60 @@ def load_html_files_to_process():
         logging.debug("html_files_to_process.csv not present at:%s",full_datafilepath)
 
 
-def save_html_files_to_process(the_dict):
-    logging.debug("Enter:save_html_files_to_process")
-    logging.debug("Exit:save_html_files_to_process")
+def save_html_file_to_process(the_html_dict):
+    logging.debug("Enter:save_html_file_to_process")
+    full_datafilepath = "{}/html_files_to_process.csv".format(processed_files_location)
+    the_url = the_html_dict.keys() # should only be one
+    logging.debug("save_html_file_to_process: going to this pair to file:%s,%s",the_url[0],the_html_dict[the_url[0]])
+    pair = "{},{}\n".format(the_url[0],the_html_dict[the_url])
+    with open(full_datafilepath, "a+") as f:
+        f.writelines(pair)
+    logging.debug("Exit:save_html_file_to_process")
     
     
+def determine_files_already_processed():
+    logging.debug("Enter:determine_files_already_processed")  
+    # if the data csv file exists, dont need to redo/add redundant information
+    #load csv file and remove urls already processed
+    full_datafilepath = "{}/scanned_urls.csv".format(processed_files_location)
+    if not os.path.isfile(full_datafilepath):
+        logging.debug("determine_files_already_processed: no file exists to check")
+        logging.debug("Exit:determine_files_already_processed")
+        return
+    with open(full_datafilepath, 'rb') as f:
+        mycsv = csv.reader(f)
+        for row in mycsv:
+            logging.debug("determine_files_already_processed: will delete %s in processing queue if it exists", row[0])
+            html_files_to_process.pop(row[0], None)  
+    logging.debug("Exit:determine_files_already_processed")  
 
 def check_url(url):
     response_code = ""
     try:
         response_code = requests.head(url)
     except requests.exceptions.ConnectionError as ex:
-        logging.debug("Connection error:%s", ex)
+        logging.debug("check_url:Connection error:%s", ex)
         return False
     except requests.exceptions.RequestException as ex:
-        logging.debug("Request error:%s", ex)
+        logging.debug("check_url:Request error:%s", ex)
         return False
     return response_code.status_code < 400
 
-scanner_url = "http://urlquery.net/api/v2/post.php?url=https://www.va.gov"
+
 scanner_primer_url = "http://urlquery.net/index.php"
 scanner_report_url = "http://urlquery.net/report.php?id="
-scanner_report_url = "http://urlquery.net/queued.php?id="
+scanner_queued_url = "http://urlquery.net/queued.php?id="
 website_url = "https://www.va.gov"
 
-#session = requests.session()
+# PhantomJS needs location of binary on device
 session = webdriver.PhantomJS(executable_path="/Users/intothelight/anaconda/pkgs/phantomjs-2.1.1-0/bin/phantomjs")
 session.set_window_size(1439, 799)
 
-#load_urls_to_scan()
-logging.debug("Loaded urls to scan. Total amount:%s", len(urls_to_scan.keys()))
-    
+# Load up new or in-progress files
+load_urls_to_scan()    
 load_html_files_to_process()
 
-# Here we would start our loop to process urls to be scanned
+
 # BEGIN SCAN LOOP
 still_scanning = True
 skipped_urls = {}
@@ -168,13 +182,14 @@ while still_scanning:
         still_scanning = False #but maybe we have html files to process
         continue
           
-          
-#     if check_url(website_url):
-#         logging.debug("Target site is up")
-#     else:
-#         logging.warn("Target site not available, skipping: %s", website_url)
-#         skipped_urls[website_url] = website_url
-#         continue    
+    # we can comment out this check if some urls have issues and just let
+    #  the scanner timeout if need be (ie. my machine python requests module is having issues with ssl)      
+    if check_url(website_url):
+        logging.debug("Target site is up")
+    else:
+        logging.warn("Target site not available, skipping: %s", website_url)
+        skipped_urls[website_url] = website_url
+        continue    
          
       
     session.get(scanner_primer_url)
@@ -237,6 +252,8 @@ while still_scanning:
         html_file.write(session.page_source)
         html_file.close()
         html_files_to_process[website_url] = full_filepath
+        new_pair = {website_url:full_filepath}
+        save_html_file_to_process(new_pair)
         del urls_to_scan[website_url]
         new_set_to_scan = deepcopy(urls_to_scan)
         if len(skipped_urls.keys()) > 0:
@@ -251,6 +268,7 @@ logging.debug("Quit session connection")
 # END SCAN LOOP
 # All urls should be scanned by this point
 # now start processing html files
+
 
 
 # html elements of interest
@@ -273,6 +291,8 @@ if not os.path.isfile(full_datafilepath):
     writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
     writer.writeheader()
 else:
+    # lets make sure we don't re-process files
+    determine_files_already_processed()
     csv_file = open(full_datafilepath, 'ab')
     writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
 
