@@ -22,11 +22,7 @@ head(train, n = 5)
 names(train)
 # any na -- nope
 sum(is.na(train))
-# correlations
-cor(train)
-corrgram(train, order=TRUE, lower.panel=panel.shade,
-         upper.panel=panel.pie, text.panel=panel.txt,
-         main="variable correlations")
+
 # get numeric columns
 numeric_columns <- sapply(train, is.numeric)
 train.continuous <- train[,numeric_columns]
@@ -50,6 +46,18 @@ apply(train.continuous[,-c(1)], 2, skewness)
 # So, maybe only loss needs to be transformed, lets do a density plot on it:
 plot(density(train.continuous$loss)) 
 # yep, skewed right, lets do a log transform
+train.continuous$loss <- log10(train.continuous$loss + 1)
+train$loss <- log10(train$loss + 1)
+plot(density(train.continuous$loss))
+
+# correlations
+cor(train.continuous)
+corrgram(train.continuous, order=TRUE, lower.panel=panel.shade,
+         upper.panel=panel.pie, text.panel=panel.txt,
+         main="variable correlations")
+
+# Can we hot encode now?
+
 
 ### DO WE NEED TO SPLIT DATA FIRST?
 ## 75% of the sample size
@@ -59,7 +67,7 @@ set.seed(625)
 train_indices <- sample(seq_len(nrow(train)), size = smp_size)
 train.set <- train[train_indices, ]
 test.set <- train[-train_indices, ]
-#########train.continuous$loss <- log10(train.continuous$loss + 1)
+#########
 #########plot(density(train.continuous$loss)) # verify transformation
 
 
